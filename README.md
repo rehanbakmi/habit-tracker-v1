@@ -1,62 +1,215 @@
-<<<<<<< HEAD
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistem Prediksi Relapse Kebiasaan Berbasis Bio-Behavioral Feedback
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi web untuk melacak kebiasaan harian sekaligus memprediksi risiko relapse (kegagalan mempertahankan rutinitas) menggunakan analisis perilaku dan sentimen jurnal harian berbasis NLP.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Fitur Utama
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **Habit Tracker** — catat, kelola, dan tandai habit selesai setiap hari
+- **Prediksi Relapse** — skor risiko otomatis dari 3 faktor: streak, frekuensi skip, dan sentimen jurnal
+- **Jurnal Mood Harian** — analisis sentimen teks menggunakan model BERT multilingual
+- **Kalender Visual** — lihat histori penyelesaian habit per bulan
+- **Mode Bertahan** — sistem memberikan peringatan saat risiko relapse tinggi
+- **Panel Admin** — kelola user dan kategori habit
+- **Role Management** — role admin dan user
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Teknologi
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+| Komponen | Teknologi |
+|---|---|
+| Backend utama | Laravel 11 (PHP 8.x) |
+| Database | SQLite |
+| Antrian & Cache | Redis |
+| NLP / Sentimen | Python 3.x + FastAPI + BERT (nlptown/bert-base-multilingual-uncased-sentiment) |
+| Frontend | Blade + Tailwind CSS |
+| Autentikasi | Laravel Breeze |
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Arsitektur Sistem
 
-## Agentic Development
+```
+Browser (User)
+    ↓
+Laravel (Port 8000)
+    ├── Habit & Streak Management
+    ├── RelapsePredictionService
+    │       ├── Skor Streak
+    │       ├── Skor Skip (7 hari terakhir)
+    │       └── HTTP Request → FastAPI Python
+    └── Queue Worker (Redis)
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+FastAPI Python (Port 8001)
+    └── Model BERT → Analisis Sentimen Jurnal
+            └── Kembalikan mood_score ke Laravel
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## Instalasi
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Prasyarat
 
-## Code of Conduct
+Pastikan sudah terinstall:
+- PHP 8.x + Composer
+- Python 3.8+
+- Redis
+- Node.js (opsional, untuk build asset)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 1. Clone Repository
 
-## Security Vulnerabilities
+```bash
+git clone https://github.com/username/habit-tracker.git
+cd habit-tracker
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 2. Setup Laravel
 
-## License
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+php artisan db:seed --class=CategorySeeder
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-=======
-# habit-tracker-rpl-project
->>>>>>> 16a59ff51370045547b63972d24cf5eeafb5050c
+Edit `.env` dan sesuaikan:
+```env
+DB_CONNECTION=sqlite
+
+SENTIMENT_API_URL=http://127.0.0.1:8001
+SENTIMENT_API_KEY=h4b1t-tr4ck3r-s3cr3t-k3y-2026
+
+QUEUE_CONNECTION=redis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+```
+
+### 3. Setup Python (NLP Service)
+
+```bash
+cd ../sentiment-service
+python3 -m venv venv
+source venv/bin/activate
+pip install fastapi uvicorn transformers torch
+```
+
+---
+
+## Cara Menjalankan
+
+Buka **3 terminal terpisah** dan jalankan sesuai urutan:
+
+### Terminal 1 — Redis
+```bash
+sudo service redis start
+```
+
+### Terminal 2 — Python FastAPI
+```bash
+cd sentiment-service
+source venv/bin/activate
+INTERNAL_API_KEY=h4b1t-tr4ck3r-s3cr3t-k3y-2026 uvicorn main:app --host 127.0.0.1 --port 8001
+```
+Tunggu hingga muncul: `Model siap.`
+
+### Terminal 3 — Laravel
+```bash
+cd habit-tracker
+php artisan queue:work &
+php artisan serve
+```
+
+Atau gunakan script otomatis:
+```bash
+bash run.sh
+```
+
+Buka browser: **http://localhost:8000**
+
+---
+
+## Akun Admin
+
+Setelah register, set role admin lewat tinker:
+
+```bash
+php artisan tinker
+```
+```php
+$user = App\Models\User::where('email', 'email@anda.com')->first();
+$user->role = 'admin';
+$user->save();
+```
+
+Panel admin tersedia di: **http://localhost:8000/admin**
+
+---
+
+## Struktur Folder Penting
+
+```
+habit-tracker/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── HabitController.php
+│   │   │   ├── JournalController.php
+│   │   │   ├── CalendarController.php
+│   │   │   └── AdminController.php
+│   │   └── Middleware/
+│   │       └── AdminMiddleware.php
+│   ├── Models/
+│   │   ├── Habit.php
+│   │   ├── HabitLog.php
+│   │   ├── HabitJournal.php
+│   │   └── Category.php
+│   └── Services/
+│       └── RelapsePredictionService.php
+├── resources/views/
+│   ├── dashboard.blade.php
+│   ├── habits/
+│   ├── calendar/
+│   └── admin/
+├── routes/
+│   └── web.php
+├── run.sh
+└── stop.sh
+
+sentiment-service/
+├── main.py
+└── .env
+```
+
+---
+
+## Cara Mematikan
+
+```bash
+bash stop.sh
+```
+
+Atau manual:
+```bash
+# Ctrl+C di terminal Laravel dan Python
+sudo service redis stop
+```
+
+---
+
+## Pengembangan Lanjutan (Future Work)
+
+- Integrasi Google Health Connect API untuk data biologis otomatis (jam tidur, detak jantung)
+- Model BiLSTM custom yang dilatih dengan dataset bahasa Indonesia
+- Notifikasi email/push saat risiko relapse tinggi
+- Grafik histori skor risiko harian
+- Deploy ke VPS dengan Docker
+
+---
+
+## Lisensi
+
+MIT License — bebas digunakan untuk keperluan akademis.
