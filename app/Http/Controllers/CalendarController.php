@@ -15,25 +15,26 @@ class CalendarController extends Controller
         $year  = $request->get('year', now()->year);
 
         $startOfMonth = Carbon::create($year, $month, 1);
-        $endOfMonth   = $startOfMonth->copy()->endOfMonth();
         $daysInMonth  = $startOfMonth->daysInMonth;
 
         $user   = auth()->user();
         $habits = $user->habits()->with('logs')->get();
+        $total  = $habits->count();
 
-        // Buat data per hari: berapa habit selesai vs total
         $calendarData = [];
         for ($day = 1; $day <= $daysInMonth; $day++) {
             $date      = Carbon::create($year, $month, $day)->toDateString();
             $completed = 0;
 
             foreach ($habits as $habit) {
-                if ($habit->logs->contains('completed_date', $date)) {
+                $done = $habit->logs->contains(function ($log) use ($date) {
+                    return Carbon::parse($log->completed_date)->toDateString() === $date;
+                });
+                if ($done) {
                     $completed++;
                 }
             }
 
-            $total = $habits->count();
             $calendarData[$date] = [
                 'completed' => $completed,
                 'total'     => $total,
