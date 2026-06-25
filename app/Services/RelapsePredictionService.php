@@ -51,18 +51,32 @@ class RelapsePredictionService
         $totalSkips = 0;
 
         foreach ($habits as $habit) {
-            $lastWeek = collect();
-            for ($i = 1; $i <= 7; $i++) {
-                $date = now()->subDays($i)->toDateString();
-                $lastWeek->push($date);
-            }
+            // Mulai hitung dari tanggal habit dibuat, bukan 7 hari lalu
+            $habitCreated = \Carbon\Carbon::parse($habit->created_at)->startOfDay();
+            $daysAgo7     = now()->subDays(7)->startOfDay();
+
+            // Ambil tanggal mulai yang paling relevan
+            $startDate = $habitCreated->gt($daysAgo7) ? $habitCreated : $daysAgo7;
+
+            // Hitung berapa hari sejak habit dibuat sampai kemarin
+            $dayCount = $startDate->diffInDays(now()->startOfDay());
+
+            // Kalau habit baru dibuat hari ini, skip = 0
+            if ($dayCount === 0) continue;
 
             $completed = $habit->logs
                 ->pluck('completed_date')
                 ->map(fn($d) => \Carbon\Carbon::parse($d)->toDateString())
                 ->toArray();
 
-            $skipped = $lastWeek->filter(fn($d) => !in_array($d, $completed))->count();
+            $skipped = 0;
+            for ($i = 1; $i <= $dayCount; $i++) {
+                $date = now()->subDays($i)->toDateString();
+                if (!in_array($date, $completed)) {
+                    $skipped++;
+                }
+            }
+
             $totalSkips += $skipped;
         }
 
